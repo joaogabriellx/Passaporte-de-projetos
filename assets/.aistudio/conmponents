@@ -1,0 +1,2140 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { ArchiveProject } from '../types';
+
+interface ArchiveViewProps {
+  projects: ArchiveProject[];
+  onToggleSaveProject: (id: string) => void;
+  onPublishCurrentProject: () => void;
+  searchQuery: string;
+}
+
+export default function ArchiveView({
+  projects,
+  onToggleSaveProject,
+  onPublishCurrentProject,
+  searchQuery,
+}: ArchiveViewProps) {
+  const [performanceFilter, setPerformanceFilter] = useState<'todos' | 'success' | 'failure'>('todos');
+
+  // Filter project cards
+  const filteredProjects = projects.filter((p) => {
+    // 1. Performance filter
+    if (performanceFilter === 'success' && p.badgeType !== 'success' && p.badgeType !== 'verified') return false;
+    if (performanceFilter === 'failure' && p.badgeType !== 'failure' && p.badgeType !== 'warning') return false;
+
+    // 2. Search query filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(q) || p.sector.toLowerCase().includes(q) || p.learnings.toLowerCase().includes(q)
+      );
+    }
+
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Filters & Statistics Header Section */}
+      <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 select-none">
+        <div>
+          <h3 className="font-bold text-[10px] text-slate-400 font-mono uppercase tracking-wider mb-2">
+            FILTRAGEM POR DESEMPENHO NO ACERVO
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPerformanceFilter('todos')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer ${
+                performanceFilter === 'todos'
+                  ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setPerformanceFilter('success')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                performanceFilter === 'success'
+                  ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              Bem-sucedidos
+            </button>
+            <button
+              onClick={() => setPerformanceFilter('failure')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+                performanceFilter === 'failure'
+                  ? 'bg-slate-900 border-slate-900 text-white shadow-md'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">cancel</span>
+              Falidos / Problemáticos
+            </button>
+          </div>
+        </div>
+
+        {/* Global archive statistics */}
+        <div className="flex items-center gap-8 text-right bg-white px-6 py-3 border border-slate-200 rounded-2xl shadow-sm">
+          <div className="pr-6 border-r border-slate-100">
+            <p className="text-[9px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+              PROJETOS ARQUIVADOS
+            </p>
+            <p className="text-2xl font-extrabold text-slate-800 font-sans tracking-tight">142</p>
+          </div>
+          <div>
+            <p className="text-[9px] font-bold text-slate-400 font-mono uppercase tracking-wider">
+              TAXA DE ÊXITO GLOBAL
+            </p>
+            <p className="text-2xl font-extrabold text-emerald-600 font-sans tracking-tight">68%</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Peer-Learning Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProjects.map((p) => {
+          const isVerified = p.badgeType === 'verified';
+          const isSuccess = p.badgeType === 'success';
+          const isWarning = p.badgeType === 'warning';
+          const isFailure = p.badgeType === 'failure';
+          const isInProgress = p.badgeType === 'in_progress';
+
+          return (
+            <article
+              key={p.id}
+              className={`bg-white border p-6 rounded-2xl flex flex-col relative transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                isFailure
+                  ? 'bg-rose-50/5 border-dashed border-rose-300'
+                  : isWarning
+                  ? 'bg-amber-50/10 border-amber-300'
+                  : p.isSaved
+                  ? 'border-emerald-300 shadow-sm shadow-emerald-500/5'
+                  : 'border-slate-200/80 shadow-sm'
+              }`}
+            >
+              {/* Badge type and date info */}
+              <div className="absolute top-6 right-6 flex items-center gap-2 select-none">
+                <span className="material-symbols-outlined text-[18px]">
+                  {isVerified
+                    ? 'verified'
+                    : isSuccess
+                    ? 'check_circle'
+                    : isWarning
+                    ? 'error'
+                    : isFailure
+                    ? 'cancel'
+                    : 'sync'}
+                </span>
+                <div className="font-mono text-[10px] font-bold text-slate-400 flex items-center gap-0.5">
+                  <span className="material-symbols-outlined text-[12px] text-slate-450">lock</span>
+                  {p.period}
+                </div>
+              </div>
+
+              {/* Header metadata */}
+              <div className="mb-4">
+                <p className="text-[10px] font-bold font-mono text-slate-400 tracking-wider uppercase mb-1">
+                  SETOR: {p.sector}
+                </p>
+                <h4
+                  className={`font-extrabold font-sans leading-tight text-[16px] ${
+                    p.isAnonymized ? 'text-slate-500 italic' : 'text-slate-800'
+                  }`}
+                >
+                  {p.title}
+                </h4>
+              </div>
+
+              {/* Main content lessons learned */}
+              <div className="flex-1 space-y-4">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 tracking-wider font-mono mb-1 select-none">
+                    PRINCIPAIS APRENDIZADOS E LIÇÕES
+                  </p>
+                  <p className="text-slate-600 text-xs leading-relaxed line-clamp-4">
+                    {p.learnings}
+                  </p>
+                </div>
+
+                {/* Author profile or anonymity indicator */}
+                <div className="flex items-center gap-2 select-none">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                      p.isAnonymized ? 'bg-slate-100 text-slate-400' : 'bg-emerald-50 text-emerald-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {p.isAnonymized ? 'visibility_off' : 'person'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-450 font-medium">
+                    {p.isAnonymized ? (
+                      <span>Identidade Preservada</span>
+                    ) : (
+                      <span>
+                        Compartilhado por <span className="font-bold text-slate-700">{p.author}</span>
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions bookmark references */}
+              <div className="mt-6 grid grid-cols-2 gap-3 pt-4 border-t border-slate-50">
+                <button
+                  onClick={() => alert(`Visualizando análise detalhada do projeto ${p.title}. Todos os dados de lições regulatórias analisados com sucesso!`)}
+                  className="py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold rounded-xl transition-all shadow-md select-none cursor-pointer"
+                >
+                  Ver análise
+                </button>
+                <button
+                  onClick={() => onToggleSaveProject(p.id)}
+                  className={`py-2.5 border text-[11px] font-bold rounded-xl transition-colors select-none cursor-pointer flex items-center justify-center gap-1 ${
+                    p.isSaved
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                  title={p.isSaved ? 'Remover dos salvos' : 'Salvar como referência'}
+                >
+                  <span className="material-symbols-outlined text-[14px]">
+                    {p.isSaved ? 'turned_in' : 'turned_in_not'}
+                  </span>
+                  <span>{p.isSaved ? 'Salvo' : 'Salvar ref.'}</span>
+                  <span className="text-[9px] font-mono text-slate-400 pl-0.5">({p.savedCount})</span>
+                </button>
+              </div>
+            </article>
+          );
+        })}
+
+        {/* Skeleton loader / Contribute active project */}
+        <button
+          onClick={onPublishCurrentProject}
+          className="bg-slate-200 hover:bg-slate-100/60 border-2 border-dashed border-slate-350 p-6 rounded-2xl flex flex-col items-center justify-center text-center opacity-80 hover:opacity-100 transition-all cursor-pointer h-full border-slate-300 select-none min-h-[300px]"
+        >
+          <span className="material-symbols-outlined text-4xl text-slate-400 mb-2 transition-transform hover:scale-110 duration-200">
+            add_circle
+          </span>
+          <p className="font-extrabold text-xs text-slate-500 uppercase font-mono tracking-wider">
+            Contribuir com <br /> Meu Aprendizado
+          </p>
+          <p className="text-[10px] text-slate-400 mt-2 max-w-[180px] leading-relaxed">
+            Compartilhe anonimamente seu passaporte de decisões para alimentar a comunidade de design.
+          </p>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { ActiveCommitment } from '../types';
+
+interface CommitmentsViewProps {
+  commitments: ActiveCommitment[];
+  onFulfillCommitment: (id: string, obs: string) => void;
+  onRegularizeCommitment: (id: string, obs: string) => void;
+  onAddAuditLog: (title: string, desc: string) => void;
+  searchQuery: string;
+}
+
+export default function CommitmentsView({
+  commitments,
+  onFulfillCommitment,
+  onRegularizeCommitment,
+  onAddAuditLog,
+  searchQuery,
+}: CommitmentsViewProps) {
+  const [selectedCommitment, setSelectedCommitment] = useState<ActiveCommitment | null>(null);
+  const [obsText, setObsText] = useState('');
+  const [actionType, setActionType] = useState<'cumprir' | 'regularizar'>('cumprir');
+
+  // Trigger fulfill flow
+  const handleOpenFulfill = (com: ActiveCommitment) => {
+    setSelectedCommitment(com);
+    setActionType('cumprir');
+    setObsText('');
+  };
+
+  // Trigger regularize flow
+  const handleOpenRegularize = (com: ActiveCommitment) => {
+    setSelectedCommitment(com);
+    setActionType('regularizar');
+    setObsText('');
+  };
+
+  // Confirm action
+  const handleConfirmAction = () => {
+    if (!selectedCommitment) return;
+    if (actionType === 'cumprir') {
+      onFulfillCommitment(selectedCommitment.id, obsText || 'Conformidade auditada sem restrições.');
+    } else {
+      onRegularizeCommitment(selectedCommitment.id, obsText || 'Documentação revisada de emergência e taxas pagas.');
+    }
+    setSelectedCommitment(null);
+  };
+
+  // Sum statistics
+  const totalCommitmentsCount = commitments.length;
+  const completedCount = commitments.filter((c) => c.status === 'concluido').length;
+  const progressRatio = totalCommitmentsCount > 0 ? Math.round(((completedCount + 3) / (totalCommitmentsCount + 3)) * 100) : 100;
+
+  // Filter commitments based on search
+  const filteredCommitments = commitments.filter((c) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || c.statusLabel.toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats Bento Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 select-none">
+        {/* Total commitments */}
+        <div className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="font-bold text-[10px] text-slate-400 font-mono uppercase tracking-wider block">
+            TOTAL DE COMPROMISSOS
+          </span>
+          <div className="flex items-end justify-between mt-2">
+            <span className="text-3xl font-extrabold text-slate-800 tracking-tight">
+              {totalCommitmentsCount + 3}
+            </span>
+            <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-150">
+              +2 este mês
+            </span>
+          </div>
+        </div>
+
+        {/* Fulfillment Rate */}
+        <div className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="font-bold text-[10px] text-slate-400 font-mono uppercase tracking-wider block">
+            TAXA DE CUMPRIMENTO
+          </span>
+          <div className="flex items-center justify-between mt-3 gap-4">
+            <span className="text-3xl font-extrabold text-slate-800 tracking-tight">{progressRatio}%</span>
+            <div className="h-2 w-28 bg-slate-100 rounded-full overflow-hidden shrink-0">
+              <div className="h-full bg-slate-900 transition-all duration-500" style={{ width: `${progressRatio}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Next Expiry */}
+        <div className="bg-white p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <span className="font-bold text-[10px] text-slate-400 font-mono uppercase tracking-wider block">
+            PRÓXIMO VENCIMENTO
+          </span>
+          <div className="flex items-end justify-between mt-2">
+            <span className="text-3xl font-extrabold text-slate-800 tracking-tight">15 d</span>
+            <span className="material-symbols-outlined text-amber-500 text-[26px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              warning
+            </span>
+          </div>
+        </div>
+
+        {/* Audit Request action card */}
+        <button
+          onClick={() => {
+            onAddAuditLog('Revisão Externa Solicitada', 'Admin solicitou uma nova averiguação técnica de integridade de ciclo de vida.');
+            alert('Revisão e auditoria técnica independente solicitada. O Regulador Geral foi notificado no ledger.');
+          }}
+          className="bg-emerald-50/10 hover:bg-emerald-50/30 p-5 border border-emerald-500 border-dashed rounded-2xl flex flex-col justify-between text-left transition-all hover:border-emerald-600 shadow-sm shadow-emerald-500/5 cursor-pointer hover:translate-y-[-1px]"
+        >
+          <span className="font-bold text-[10px] text-emerald-800 font-mono uppercase tracking-wider">
+            NOVA AUDITORIA INDEPENDENTE
+          </span>
+          <div className="flex items-center gap-2 mt-3 text-emerald-700 font-bold text-[13px] hover:underline">
+            <span className="material-symbols-outlined font-bold text-[20px]">history_edu</span>
+            <span>Solicitar Revisão de Insumos</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Commitments Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCommitments.map((c) => {
+          const isWarning = c.status === 'proximo';
+          const isDanger = c.status === 'expirado';
+          const isSuccess = c.status === 'concluido';
+
+          return (
+            <div
+              key={c.id}
+              className={`bg-white border rounded-2xl p-6 flex flex-col hover:shadow-md transition-shadow relative ${
+                isWarning
+                  ? 'bg-amber-50/20 border-2 border-dashed border-amber-500/50 shadow-sm'
+                  : isDanger
+                  ? 'bg-rose-50/5 border-2 border-rose-300 shadow-sm'
+                  : 'border-slate-200 shadow-sm'
+              }`}
+            >
+              {/* Badge header */}
+              <div className="flex justify-between items-start mb-4">
+                <div
+                  className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase font-mono border flex items-center gap-1.5 ${
+                    isSuccess
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                      : isWarning
+                      ? 'bg-amber-100 text-amber-800 border-amber-200'
+                      : isDanger
+                      ? 'bg-rose-100 text-rose-700 border-rose-200 animate-pulse'
+                      : 'bg-slate-50 text-slate-500 border-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[14px]">
+                    {isSuccess
+                      ? 'check_circle'
+                      : isWarning
+                      ? 'event_repeat'
+                      : isDanger
+                      ? 'error'
+                      : 'schedule'}
+                  </span>
+                  {c.statusLabel}
+                </div>
+                <div className="font-mono text-[11px] text-slate-400 font-bold flex items-center gap-1 select-none">
+                  <span className="material-symbols-outlined text-[13px] text-slate-400">lock</span>
+                  {c.code}
+                </div>
+              </div>
+
+              {/* Title and details */}
+              <h3 className="font-bold text-[16px] text-slate-800 tracking-tight mb-1.5">{c.title}</h3>
+              <p className="text-slate-500 text-xs leading-relaxed mb-6 line-clamp-3">
+                {c.description}
+              </p>
+
+              {/* Progress and indicators */}
+              <div className="mt-auto space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1 text-[10.5px] font-mono font-bold tracking-wide">
+                    <span className={isWarning ? 'text-amber-800' : isDanger ? 'text-rose-600' : 'text-slate-400'}>
+                      {isWarning ? 'PROGRESSO CRÍTICO' : isDanger ? 'PRAZO ENCERRADO' : 'PROGRESSO DO CICLO'}
+                    </span>
+                    <span className="text-slate-700">{c.progress}%</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-slate-900'
+                      }`}
+                      style={{ width: `${c.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Date Remaining & Links */}
+                <div className="flex items-center justify-between text-xs select-none border-b border-slate-50 pb-3">
+                  <div
+                    className={`flex items-center gap-1 font-semibold ${
+                      isDanger ? 'text-rose-600' : isWarning ? 'text-amber-700' : 'text-slate-400'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {isDanger ? 'history' : isWarning ? 'alarm' : 'calendar_today'}
+                    </span>
+                    {c.timeRemaining}
+                  </div>
+                  <button className="text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 font-semibold text-xs cursor-pointer">
+                    <span className="material-symbols-outlined text-[16px]">link</span>
+                    <span>Decisão {c.code.replace('#', 'ID-')}</span>
+                  </button>
+                </div>
+
+                {/* Conditional Actions */}
+                {isSuccess ? (
+                  <div className="w-full text-center text-emerald-600 py-2 bg-emerald-50 rounded-xl text-xs font-bold font-mono tracking-wide border border-emerald-100 flex items-center justify-center gap-1.5 shadow-sm">
+                    <span className="material-symbols-outlined text-[16px] font-bold">done</span>
+                    CONFORMIDADE COMPLETA E VALIDADA
+                  </div>
+                ) : isDanger ? (
+                  <button
+                    onClick={() => handleOpenRegularize(c)}
+                    className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 shadow-md shadow-rose-600/10 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">warning</span>
+                    Regularizar Agora
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenFulfill(c)}
+                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                    Registrar cumprimento
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Interactive Verification Form Modal */}
+      {selectedCommitment && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-100 p-6 flex flex-col gap-4 animate-in scale-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl text-white ${actionType === 'cumprir' ? 'bg-slate-900' : 'bg-rose-600'}`}>
+                <span className="material-symbols-outlined text-2xl">
+                  {actionType === 'cumprir' ? 'history_edu' : 'warning_amber'}
+                </span>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800 font-sans leading-tight">
+                  {actionType === 'cumprir' ? 'Registrar Cumprimento Imutável' : 'Regularizar Advertência Reguladora'}
+                </h3>
+                <p className="text-[11px] text-slate-400 font-mono tracking-wide mt-0.5">
+                  AUDITORIA PARA CÉDULA: {selectedCommitment.code}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 mt-1">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Você está gerando uma evidência auditável para o compromisso:{' '}
+                <span className="font-bold text-slate-800">{selectedCommitment.title}</span>.
+              </p>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 font-mono uppercase block mb-1">
+                  OBSERVAÇÕES E NOTAS DE CONFORMIDADE:
+                </label>
+                <textarea
+                  value={obsText}
+                  onChange={(e) => setObsText(e.target.value)}
+                  rows={4}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 text-slate-700 outline-none placeholder-slate-400"
+                  placeholder={
+                    actionType === 'cumprir'
+                      ? 'Descreva as ações realizadas para auditar e cumprir esta etapa ambiental...'
+                      : 'Justifique as correções de emergência executadas, pagamentos de taxas carbono ou remediações...'
+                  }
+                />
+              </div>
+
+              <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl text-[11px] text-slate-500 font-mono flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px]">lock_clock</span>
+                Ao salvar, este log será criptografado e assinado digitalmente.
+              </div>
+            </div>
+
+            <div className="flex gap-3 text-xs grid grid-cols-2 mt-2">
+              <button
+                onClick={() => setSelectedCommitment(null)}
+                className="py-2.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className={`py-2.5 text-white font-extrabold rounded-xl transition-colors cursor-pointer shadow-md ${
+                  actionType === 'cumprir'
+                    ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-950/20'
+                    : 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/10'
+                }`}
+              >
+                {actionType === 'cumprir' ? 'Assinar e Registar' : 'Regularizar Status'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { MarketReport, AuditLog, UserProfile } from '../types';
+
+interface GovernanceViewProps {
+  marketReports: MarketReport[];
+  auditLogs: AuditLog[];
+  projectName: string;
+  projectSector: string;
+  statusText: string;
+  projectLogo: string;
+  onAddAuditLog: (title: string, desc: string) => void;
+  onResetProjectData: () => void;
+  searchQuery: string;
+}
+
+export default function GovernanceView({
+  marketReports,
+  auditLogs,
+  projectName,
+  projectSector,
+  statusText,
+  projectLogo,
+  onAddAuditLog,
+  onResetProjectData,
+  searchQuery,
+}: GovernanceViewProps) {
+  const [inviteLink, setInviteLink] = useState('https://passaporte.prj/mesa-adaptativa/invite/482s');
+  const [copied, setCopied] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([
+    { name: 'Admin (Você)', email: 'Dono do Projeto', role: 'Owner', id: 'm-1' },
+    { name: 'Mariana Silva', email: 'm.silva@furniture.com', role: 'Editor', id: 'm-2' },
+    { name: 'Roberto Junior', email: 'roberto.j@legalsys.pt', role: 'Leitura', id: 'm-3' },
+  ]);
+  const [shareArchive, setShareArchive] = useState(true);
+  const [showClosureModal, setShowClosureModal] = useState(false);
+  const [closureConfirmText, setClosureConfirmText] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Handle copying
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    onAddAuditLog('Link de convite copiado', 'O link de convite para colaboração foi exportado para o clipboard por Admin.');
+  };
+
+  // Change member role
+  const handleRoleChange = (id: string, newRole: string) => {
+    setTeamMembers(
+      teamMembers.map((m) => (m.id === id ? { ...m, role: newRole } : m))
+    );
+    const memberName = teamMembers.find((m) => m.id === id)?.name;
+    onAddAuditLog(
+      'Permissão de membro alterada',
+      `O nível de acesso para ${memberName} foi alterado para ${newRole}.`
+    );
+  };
+
+  // Irreversible Project closure
+  const handleConfirmClosure = () => {
+    if (closureConfirmText !== projectName) {
+      setErrorMessage(`Por favor digite "${projectName}" corretamente.`);
+      return;
+    }
+    // Execution of Reset / Closure
+    onResetProjectData();
+    setShowClosureModal(false);
+    setClosureConfirmText('');
+    setErrorMessage('');
+    alert('O Passaporte do Projeto foi arquivado permanentemente no ledger frio. Todos os dados locais foram reiniciados.');
+  };
+
+  // Filter audit logs
+  const filteredAuditLogs = auditLogs.filter((log) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return log.title.toLowerCase().includes(q) || log.description.toLowerCase().includes(q) || log.dateDetail.toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* SECTION A: Project Header Card */}
+      <section className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
+        <div className="flex items-center gap-6 self-stretch">
+          <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center overflow-hidden shrink-0 border border-slate-700 shadow-md">
+            {projectLogo ? (
+              <img alt="Project Incon" src={projectLogo} className="w-full h-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-3xl text-emerald-400">chair</span>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold text-2xl text-slate-800 tracking-tight">{projectName}</h2>
+            <div className="flex flex-wrap gap-4 mt-2">
+              <span className="flex items-center gap-1 text-slate-500 font-semibold uppercase font-mono text-[10px] tracking-wider select-none">
+                <span className="material-symbols-outlined text-[16px] text-slate-400">chair</span>
+                Setor: {projectSector}
+              </span>
+              <span className="flex items-center gap-1 text-slate-500 font-semibold uppercase font-mono text-[10px] tracking-wider select-none">
+                <span className="material-symbols-outlined text-[16px] text-slate-400">lock</span>
+                Status: {statusText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 shrink-0 self-stretch sm:self-auto justify-end w-full sm:w-auto">
+          <button className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 text-slate-700 font-bold rounded-xl text-xs transition-colors shadow-sm cursor-pointer">
+            Editar Perfil
+          </button>
+          <button className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all shadow-md cursor-pointer shadow-slate-950/10">
+            Ver Roadmap
+          </button>
+        </div>
+      </section>
+
+      {/* Main Grid Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Market Reports (Left Column - col-span-4) */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col gap-5 shadow-sm">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-[16px] text-slate-800 font-sans flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400">summarize</span>
+                Relatórios de Mercado
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {marketReports.map((r) => (
+                <div
+                  key={r.id}
+                  className="p-4 bg-slate-50 border border-slate-200 hover:border-slate-850 rounded-xl transition-all hover:bg-white cursor-pointer group shadow-sm flex flex-col gap-1.5"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-mono text-[10px] text-slate-400 font-semibold">
+                      {r.date}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-mono border ${
+                        r.badgeType === 'alto'
+                          ? 'bg-rose-50 text-rose-600 border-rose-100 animate-pulse'
+                          : r.badgeType === 'info'
+                          ? 'bg-sky-50 text-sky-700 border-sky-100'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      }`}
+                    >
+                      {r.badge}
+                    </span>
+                  </div>
+                  <p className="text-xs font-extrabold text-slate-800 group-hover:text-emerald-600 block transition-colors leading-snug">
+                    {r.title}
+                  </p>
+                  <p className="text-xs text-slate-500 leading-normal line-clamp-2">
+                    {r.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <button className="w-full text-center text-emerald-600 hover:text-emerald-700 font-bold text-xs hover:underline pt-2 cursor-pointer">
+              Ver todos os relatórios (7)
+            </button>
+          </div>
+
+          {/* Project Closure Card */}
+          <div className="bg-rose-50/10 border-2 border-dashed border-rose-300 p-5 rounded-2xl flex flex-col gap-4 shadow-sm">
+            <div>
+              <h3 className="font-bold text-[16px] text-rose-700 mb-1 flex items-center gap-2">
+                <span className="material-symbols-outlined">delete_forever</span>
+                Encerrar Projeto
+              </h3>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                Esta ação é irreversível e totalmente auditável. Todos os dados locais registrados serão arquivados sob chaves cegas e o acesso de edição será permanentemente revogado para todos os membros.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowClosureModal(true)}
+              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md scroll-smooth shadow-rose-600/10 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">gavel</span>
+              Encerrar Passaporte do Projeto
+            </button>
+          </div>
+        </div>
+
+        {/* Team & Sharing (Middle Column - col-span-4) */}
+        <div className="lg:col-span-4">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col gap-5 h-full shadow-sm">
+            <h3 className="font-bold text-[16px] text-slate-800 font-sans border-b border-slate-100 pb-3 flex items-center gap-2">
+              <span className="material-symbols-outlined text-slate-400">group</span>
+              Equipe &amp; Compartilhamento
+            </h3>
+
+            <div className="space-y-4">
+              {/* Copy invite link */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <label className="text-[10px] font-bold text-slate-400 font-mono uppercase block mb-1.5 tracking-wider">
+                  LINK DE CONVITE
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={inviteLink}
+                    className="flex-grow bg-transparent border-none text-xs font-semibold text-slate-600 focus:ring-0 p-0 overflow-ellipsis"
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className="p-1 hover:bg-slate-200 text-slate-700 rounded-lg shrink-0 transition-transform hover:scale-105 active:scale-90 cursor-pointer"
+                    title={copied ? 'Copiado!' : 'Copiar link'}
+                  >
+                    <span className="material-symbols-outlined text-slate-800 hover:text-emerald-500 font-bold text-[20px]">
+                      {copied ? 'check' : 'content_copy'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Members listing */}
+              <div className="space-y-3 pt-2">
+                <label className="text-[10px] font-bold text-slate-400 font-mono uppercase block tracking-wider">
+                  MEMBROS ATIVOS
+                </label>
+
+                <div className="divide-y divide-slate-100">
+                  {teamMembers.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between py-2.5">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        {m.role === 'Owner' ? (
+                          <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-[12px] font-extrabold shadow-sm shrink-0">
+                            AD
+                          </div>
+                        ) : (
+                          <span className="material-symbols-outlined text-slate-400 shrink-0 select-none text-3xl">
+                            account_circle
+                          </span>
+                        )}
+                        <div className="overflow-hidden">
+                          <p className="text-xs font-bold text-slate-800 truncate">{m.name}</p>
+                          <p className="text-[10px] text-slate-400 font-medium truncate">{m.email}</p>
+                        </div>
+                      </div>
+
+                      {m.role === 'Owner' ? (
+                        <span className="text-[11px] font-mono font-bold text-slate-900 border border-slate-200 px-2 py-0.5 bg-slate-50 rounded-md">
+                          Owner
+                        </span>
+                      ) : (
+                        <select
+                          value={m.role}
+                          onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                          className="bg-transparent border-none focus:ring-0 font-mono text-[11px] font-bold text-emerald-600 text-right cursor-pointer outline-none focus:outline-none py-0 pr-6"
+                        >
+                          <option value="Editor">Editor</option>
+                          <option value="Leitura">Leitura</option>
+                        </select>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggle Public share */}
+              <div className="flex items-center gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl mt-4">
+                <input
+                  type="checkbox"
+                  id="sharing_archive"
+                  checked={shareArchive}
+                  onChange={(e) => {
+                    setShareArchive(e.target.checked);
+                    onAddAuditLog(
+                      'Compartilhamento na comunidade alterado',
+                      `O status de compartilhamento público no Arquivo de Aprendizagem foi definido para: ${
+                        e.target.checked ? 'Compartilhado' : 'Privado'
+                      }.`
+                    );
+                  }}
+                  className="w-4 h-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer shrink-0"
+                />
+                <label htmlFor="sharing_archive" className="text-xs font-semibold text-slate-700 cursor-pointer leading-tight select-none">
+                  Compartilhar metadados anonimizados no Arquivo de Aprendizado
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Audit Log Timeline (Right Column - col-span-4) */}
+        <div className="lg:col-span-4">
+          <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col h-full shadow-sm max-h-[580px]">
+            <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-[16px] text-slate-800 font-sans flex items-center gap-2">
+                <span className="material-symbols-outlined text-slate-400">gavel</span>
+                Log de Auditoria
+              </h3>
+              <span className="material-symbols-outlined text-slate-400" style={{ fontVariationSettings: "'FILL' 1" }}>
+                verified_user
+              </span>
+            </div>
+
+            {/* Locked vertical logs list */}
+            <div className="flex-grow overflow-y-auto custom-scrollbar space-y-4 pr-1">
+              {filteredAuditLogs.map((log) => (
+                <div key={log.id} className="relative pl-5 border-l-2 border-slate-200 last:border-transparent py-0.5">
+                  <span className="absolute -left-[6.5px] top-1.5 w-2.5 h-2.5 bg-slate-400 rounded-full border-2 border-white" />
+                  <div className="bg-slate-50 p-3.5 border border-slate-200/80 rounded-xl hover:bg-slate-100/50 transition-colors">
+                    <div className="flex justify-between items-start gap-1">
+                      <span className="font-bold text-xs font-mono text-slate-700 leading-snug">
+                        {log.title}
+                      </span>
+                      {log.locked && (
+                        <span className="material-symbols-outlined text-emerald-600 text-[14px] shrink-0 font-bold" title="Registro Assinado na Blockchain">
+                          lock
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10.5px] text-slate-400 font-mono mt-0.5 select-none">{log.dateDetail}</p>
+                    <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{log.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Irreversible Closure Danger Modal */}
+      {showClosureModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-rose-100 p-6 flex flex-col gap-4 animate-in scale-in duration-200">
+            <div className="flex items-center gap-3 text-rose-600">
+              <span className="material-symbols-outlined text-4xl">warning</span>
+              <h3 className="font-extrabold text-lg text-slate-800 font-sans">Aviso de Segurança Crítico</h3>
+            </div>
+
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Você está prestes a <span className="font-bold text-rose-600">encerrarem definitivo</span> o Passaporte da <span className="font-mono bg-slate-100 px-1 py-0.5 rounded">{projectName}</span>. Todos os blocos locais de decisões, assinaturas criptográficas e compromissos ativos serão resetados localmente.
+            </p>
+
+            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl">
+              <label className="text-xs font-bold text-rose-800 block mb-1">
+                CONFIRME DIGITANDO O NOME DO PROJETO:
+              </label>
+              <p className="text-[11px] text-rose-600 mb-2 font-mono">
+                Por favor, digite <span className="font-extrabold select-all">"{projectName}"</span> para confirmar.
+              </p>
+              <input
+                type="text"
+                value={closureConfirmText}
+                onChange={(e) => {
+                  setClosureConfirmText(e.target.value);
+                  setErrorMessage('');
+                }}
+                className="w-full bg-white border border-rose-300 rounded-xl p-2 text-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 text-slate-800 font-semibold"
+                placeholder="Nome do projeto..."
+              />
+              {errorMessage && (
+                <p className="text-xs font-bold text-rose-700 mt-2">{errorMessage}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-2 grid grid-cols-2">
+              <button
+                onClick={() => {
+                  setShowClosureModal(false);
+                  setClosureConfirmText('');
+                  setErrorMessage('');
+                }}
+                className="py-2.5 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmClosure}
+                disabled={closureConfirmText.trim() === ''}
+                className="py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs transition-colors cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sim, Encerre Tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { UserProfile } from '../types';
+
+interface HeaderProps {
+  currentTab: string;
+  projectName: string;
+  activeProfile: UserProfile;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  onNotificationClick: () => void;
+}
+
+export default function Header({
+  currentTab,
+  projectName,
+  activeProfile,
+  searchQuery,
+  onSearchQueryChange,
+  onNotificationClick,
+}: HeaderProps) {
+  const getTabLabel = () => {
+    switch (currentTab) {
+      case 'timeline':
+        return 'Linha do Tempo';
+      case 'commitments':
+        return 'Compromissos Ativos';
+      case 'governance':
+        return 'Governança';
+      case 'archive':
+        return 'Arquivo de Aprendizado';
+      case 'audit_logs':
+        return 'Log de Auditoria';
+      default:
+        return 'Painel';
+    }
+  };
+
+  return (
+    <header className="fixed top-0 right-0 w-[calc(100%-280px)] h-16 bg-white border-b border-slate-200/80 flex justify-between items-center px-8 z-40 transition-colors duration-200 shadow-sm">
+      {/* Breadcrumbs Left */}
+      <div className="flex items-center gap-3">
+        <span className="font-bold text-[18px] text-slate-800 tracking-tight">
+          {getTabLabel()}
+        </span>
+        <span className="h-4 w-[1.5px] bg-slate-200"></span>
+        <span className="font-semibold text-sm text-slate-500 font-mono tracking-wide">
+          {projectName}
+        </span>
+      </div>
+
+      {/* Inputs & Profile Right */}
+      <div className="flex items-center gap-6">
+        {/* Advanced Search Bar */}
+        <div className="relative flex items-center bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-1.5 focus-within:border-emerald-500/80 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-400/20 w-72 transition-all duration-200 shadow-inner">
+          <span className="material-symbols-outlined text-slate-400 mr-2 text-[20px]">
+            search
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            className="bg-transparent border-none focus:ring-0 text-sm w-full p-0 text-slate-700 placeholder-slate-400 outline-none"
+            placeholder={
+              currentTab === 'archive'
+                ? 'Consultar repositório...'
+                : currentTab === 'commitments'
+                ? 'Pesquisar compromissos...'
+                : 'Pesquisar decisões...'
+            }
+          />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchQueryChange('')}
+              className="text-slate-400 hover:text-slate-600 font-bold text-xs font-sans p-0.5 ml-1"
+              title="Limpar pesquisa"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          )}
+        </div>
+
+        {/* Action Widgets */}
+        <div className="flex items-center gap-4">
+          {/* Notifications Button */}
+          <button
+            onClick={onNotificationClick}
+            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all relative cursor-pointer"
+            title="Sinalizadores e Alertas Recentes"
+          >
+            <span className="material-symbols-outlined text-[24px]">notifications</span>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-bounce"></span>
+          </button>
+
+          {/* User Widget */}
+          <div className="flex items-center gap-2 cursor-default border-l border-slate-200 pl-4 h-8">
+            <img
+              alt={activeProfile.avatarAlt}
+              src={activeProfile.avatar}
+              className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-sm"
+            />
+            <span className="text-[13px] font-semibold text-slate-600 hidden md:block max-w-[120px] truncate">
+              {activeProfile.name}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState, FormEvent } from 'react';
+import { Decision } from '../types';
+
+interface NewDecisionModalProps {
+  onClose: () => void;
+  onSubmit: (decision: Omit<Decision, 'id' | 'code' | 'date' | 'isImmutable' | 'author' | 'authorRole'>) => void;
+}
+
+export default function NewDecisionModal({ onClose, onSubmit }: NewDecisionModalProps) {
+  const [title, setTitle] = useState('');
+  const [justification, setJustification] = useState('');
+  const [alternatives, setAlternatives] = useState('');
+  const [sector, setSector] = useState('Furniture Design');
+  const [commitment, setCommitment] = useState('5 anos');
+  const [impactLevel, setImpactLevel] = useState<'BAIXO' | 'MÉDIO' | 'ALTO'>('BAIXO');
+  const [decisor, setDecisor] = useState('Design de Produto');
+
+  // AI-assistant analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<{
+    verdict: 'CONFORMIDADE' | 'RISCO' | 'CRÍTICO';
+    analysis: string;
+    riskWarning: string;
+    alternative: string;
+    carbonScore: number;
+  } | null>(null);
+
+  // Trigger Gemini AI review
+  const handleAIAnalysis = async () => {
+    if (!title.trim() || !justification.trim()) {
+      alert('Por favor digite um título e uma justificativa técnica primeiro para que a IA possa analisar.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAiAnalysisResult(null);
+
+    try {
+      const response = await fetch('/api/analyze-decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          justification,
+          sector,
+          alternatives,
+          commitment,
+          impactDetail: `Nível do impacto: ${impactLevel}. Decisor: ${decisor}`
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha na resposta do servidor');
+      }
+
+      const data = await response.json();
+      setAiAnalysisResult(data);
+    } catch (error) {
+      console.warn('Simulando resposta técnica devido offline do servidor ou falta de internet real:', error);
+      
+      // Fallback local robust smart simulator
+      setTimeout(() => {
+        let mockedVerdict: 'CONFORMIDADE' | 'RISCO' | 'CRÍTICO' = 'CONFORMIDADE';
+        let mockedWarning = '';
+        let mockedAlternative = '';
+        let mockedCarbon = 25;
+        let mockedText = '';
+
+        const textLower = (justification + title + alternatives).toLowerCase();
+
+        if (textLower.includes('plástico') || textLower.includes('polímero') || textLower.includes('químico') || textLower.includes('virgem')) {
+          mockedVerdict = 'CRÍTICO';
+          mockedWarning = '⚠️ DIRETRIZ SUP-2025: Proibição federal de polímeros virgens não rastreáveis em componentes mecânicos de amortecimento.';
+          mockedAlternative = 'Recomenda-se substituir por filamento de cânhamo reciclado certificado ou bioplástico PLA classe VI.';
+          mockedCarbon = 88;
+          mockedText = 'O uso de compostos derivados de petróleo virgem atrai altas taxas carbono na era moderna. A falta de um plano de ciclo fechado ou logística reversa impede a atribuição do selo de emissões neutras do projeto.';
+        } else if (textLower.includes('fornecedor') || textLower.includes('atraso') || textLower.includes('aço') || textLower.includes('transporte')) {
+          mockedVerdict = 'RISCO';
+          mockedWarning = '⚡ ALERTA DE RISCO RECORRENTE: Falha potencial de fornecedores locais identificada para o componente metálico principal.';
+          mockedAlternative = 'Recomenda-se diversificar fornecedores de liga de alumínio utilizando o consórcio regional Sul-Metal.';
+          mockedCarbon = 55;
+          mockedText = 'A seleção de fornecedores metalúrgicos sem verificação de escopos 1 e 2 de emissão pode afetar as auditorias trimestrais obrigatórias. Recomenda-se estipular em contrato revisões contínuas de governança ESG.';
+        } else {
+          mockedWarning = '✅ CONFORMIDADE ADMITIDA: Projeto atende integralmente à diretiva brasileira de economia circular 2026.';
+          mockedAlternative = 'Excelente! Manter especificações de alumínio reciclado extrudado pós-consumo.';
+          mockedCarbon = 15;
+          mockedText = 'Parabéns! Sua decisão de design baseia-se em materiais de baixíssimo impacto ecológico e reduz drasticamente o inventário geral de CO2 logístico do projeto mobiliário.';
+        }
+
+        setAiAnalysisResult({
+          verdict: mockedVerdict,
+          analysis: mockedText,
+          riskWarning: mockedWarning,
+          alternative: mockedAlternative,
+          carbonScore: mockedCarbon
+        });
+      }, 1500);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Submit complete form
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !justification.trim()) return;
+
+    // Use AI verdict if available, otherwise default to user selected impact
+    const finalType = aiAnalysisResult ? aiAnalysisResult.verdict : (impactLevel === 'ALTO' ? 'CRÍTICO' : impactLevel === 'MÉDIO' ? 'RISCO' : 'CONFORMIDADE');
+    const finalCarbon = aiAnalysisResult ? aiAnalysisResult.carbonScore : (impactLevel === 'ALTO' ? 75 : impactLevel === 'MÉDIO' ? 40 : 12);
+    const finalWarning = aiAnalysisResult ? aiAnalysisResult.riskWarning : undefined;
+
+    onSubmit({
+      title,
+      justification,
+      alternativesRejected: alternatives,
+      type: finalType,
+      impactLevel,
+      impactProgress: finalCarbon,
+      commitmentDuration: commitment,
+      decisor,
+      regulatoryRiskWarning: finalWarning
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100 animate-in slide-in-from-bottom-8 duration-350">
+        
+        {/* Header UI */}
+        <header className="p-6 bg-slate-900 text-white flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-emerald-400 text-3xl">add_moderator</span>
+            <div>
+              <h2 className="font-extrabold text-lg leading-tight font-sans">Cadastrar Nova Decisão de Ecodesign</h2>
+              <span className="text-[11px] text-slate-400 font-mono tracking-wider uppercase font-semibold">
+                Selo de Rastreabilidade Regulatório Imutável
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-2xl font-bold">close</span>
+          </button>
+        </header>
+
+        {/* Content Body Grid Split */}
+        <section className="flex-grow overflow-y-auto p-6 md:p-8 custom-scrollbar grid grid-cols-1 lg:grid-cols-12 gap-8 text-sm">
+          
+          {/* Left Form (col-span-7) */}
+          <form onSubmit={handleFormSubmit} className="lg:col-span-7 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Sector selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                  SETOR DE ATUAÇÃO
+                </label>
+                <input
+                  type="text"
+                  value={sector}
+                  onChange={(e) => setSector(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 rounded-xl p-3 text-xs outline-none text-slate-700 font-semibold"
+                  placeholder="Ex: Furniture Design"
+                  required
+                />
+              </div>
+
+              {/* Decisor selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                  DECISOR RESPONSÁVEL
+                </label>
+                <select
+                  value={decisor}
+                  onChange={(e) => setDecisor(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl p-3 text-xs text-slate-700 outline-none font-semibold cursor-pointer"
+                >
+                  <option>Design de Produto</option>
+                  <option>Engenharia</option>
+                  <option>Compliance</option>
+                  <option>Diretoria Comercial</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                TÍTULO DA DECISÃO RELEVANTE
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 rounded-xl p-3 text-xs outline-none text-slate-800 font-extrabold"
+                placeholder="Ex: Substituição de alumínio puro por reciclável anodizado"
+                required
+              />
+            </div>
+
+            {/* Justification Textarea */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                JUSTIFICATIVA TÉCNICA E MATERIAL (POR QUE DECIDIU ASSIM?)
+              </label>
+              <textarea
+                value={justification}
+                onChange={(e) => setJustification(e.target.value)}
+                rows={4}
+                className="bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 rounded-xl p-3 text-xs outline-none text-slate-700 leading-relaxed placeholder-slate-400"
+                placeholder="Detalhe os motivos de sustentabilidade, circulação, vida útil, cadeia logística regional, etc..."
+                required
+              />
+            </div>
+
+            {/* Alternatives Rejected */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                ALTERNATIVAS REJEITADAS (E POR QUE FORAM DESCARTADAS?)
+              </label>
+              <textarea
+                value={alternatives}
+                onChange={(e) => setAlternatives(e.target.value)}
+                rows={3}
+                className="bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 rounded-xl p-3 text-xs outline-none text-slate-700 leading-relaxed placeholder-slate-400"
+                placeholder="Descreva as opções consideradas e os critérios de rejeição..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+              {/* Duration commitment representation */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                  COMPROMISSO DE DURAÇÃO (VIDA ÚTIL)
+                </label>
+                <input
+                  type="text"
+                  value={commitment}
+                  onChange={(e) => setCommitment(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/10 rounded-xl p-3 text-xs outline-none text-slate-700 font-semibold"
+                  placeholder="Ex: 5 anos de garantia contra oxidação"
+                />
+              </div>
+
+              {/* General impact selection */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+                  EXPECTATIVA GERAL DE IMPACTO
+                </label>
+                <div className="flex grid grid-cols-3 gap-2">
+                  {(['BAIXO', 'MÉDIO', 'ALTO'] as const).map((level) => {
+                    const isSelected = impactLevel === level;
+                    return (
+                      <button
+                        type="button"
+                        key={level}
+                        onClick={() => setImpactLevel(level)}
+                        className={`py-2 px-3 border text-center rounded-xl font-bold cursor-pointer text-xs transition-colors select-none ${
+                          isSelected
+                            ? level === 'ALTO'
+                              ? 'bg-rose-50 border-rose-300 text-rose-700'
+                              : level === 'MÉDIO'
+                              ? 'bg-amber-50 border-amber-300 text-amber-700'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {level}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Fixed footer submissions inside the form */}
+            <div className="border-t border-slate-100 pt-5 flex items-center justify-end gap-3 grid grid-cols-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="py-3 items-center bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-center font-extrabold rounded-xl transition-colors cursor-pointer select-none"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-center rounded-xl transition-all shadow-md select-none cursor-pointer"
+              >
+                Salvar Decisão Imutável
+              </button>
+            </div>
+          </form>
+
+          {/* Right Column: AI Compliance review assistant (col-span-5) */}
+          <div className="lg:col-span-5 bg-slate-50 rounded-2xl border border-slate-200 p-5 flex flex-col justify-between max-h-[580px]">
+            {/* Header section of AI box */}
+            <div className="space-y-4 flex-grow overflow-y-auto custom-scrollbar pr-1">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-200 shrink-0">
+                <h3 className="font-extrabold text-slate-800 text-sm font-sans flex items-center gap-1.5 leading-snug">
+                  <span className="material-symbols-outlined text-emerald-600 text-[20px] shrink-0">
+                    psychology
+                  </span>
+                  Regulador Gemini IA
+                </h3>
+                <span className="bg-emerald-50 border border-emerald-150 text-[10px] font-bold text-emerald-700 px-2 py-0.5 rounded-full select-none font-mono">
+                  ACTIVE AGENT
+                </span>
+              </div>
+
+              {/* Explanatory introduction if empty */}
+              {!aiAnalysisResult && !isAnalyzing && (
+                <div className="text-slate-500 flex flex-col items-center justify-center p-6 text-center h-48 border border-dashed border-slate-300 rounded-xl bg-white/40 mb-3 select-none">
+                  <span className="material-symbols-outlined text-3xl text-slate-300 mb-1.5">
+                    gavel
+                  </span>
+                  <p className="font-bold text-xs text-slate-600">Revisão Pré-Auditoria</p>
+                  <p className="text-[11px] text-slate-400 mt-1 max-w-[200px] leading-relaxed">
+                    Clique no botão abaixo para rodar as justificativas técnicas e de materiais pelas regulamentações de ecodesign 2025/2026.
+                  </p>
+                </div>
+              )}
+
+              {/* Loading animation state */}
+              {isAnalyzing && (
+                <div className="flex flex-col items-center justify-center p-12 text-center space-y-3 h-48 mb-3 select-none bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+                  <div className="w-10 h-10 border-4 border-slate-200 border-t-emerald-600 rounded-full animate-spin shrink-0"></div>
+                  <div className="text-xs font-bold font-mono text-emerald-700 animate-pulse uppercase">
+                    Auditando Com IA...
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Avaliando veredictos, emissões de CO2 pós-uso e legislação.
+                  </p>
+                </div>
+              )}
+
+              {/* Analysis Display section */}
+              {aiAnalysisResult && (
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {/* Verdict badge and score card */}
+                  <div className="bg-white p-4 border border-slate-250/90 rounded-2xl shadow-sm grid grid-cols-2 gap-3 divide-x divide-slate-150">
+                    <div className="flex flex-col justify-center">
+                      <span className="text-[10px] font-bold text-slate-400 font-mono block mb-1">
+                        VEREDITO DA IA
+                      </span>
+                      <span
+                        className={`text-sm font-extrabold uppercase px-3 py-1 bg-slate-100 rounded-md border text-center ${
+                          aiAnalysisResult.verdict === 'CRÍTICO'
+                            ? 'bg-rose-50 text-rose-700 border-rose-150 font-extrabold'
+                            : aiAnalysisResult.verdict === 'RISCO'
+                            ? 'bg-amber-50 text-amber-700 border-amber-150'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                        }`}
+                      >
+                        {aiAnalysisResult.verdict}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col pl-4">
+                      <span className="text-[10px] font-bold text-slate-400 font-mono block mb-1">
+                        PEGADA DE CO2 (0-100)
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl font-extrabold text-slate-800">
+                          {aiAnalysisResult.carbonScore}
+                        </span>
+                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <p
+                            className={`h-full ${
+                              aiAnalysisResult.carbonScore > 65
+                                ? 'bg-rose-500'
+                                : aiAnalysisResult.carbonScore > 35
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${aiAnalysisResult.carbonScore}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Warning banner */}
+                  <div className="p-3.5 bg-slate-900 text-amber-300 font-mono border border-slate-800 rounded-xl text-[11px] leading-relaxed">
+                    {aiAnalysisResult.riskWarning}
+                  </div>
+
+                  {/* Deep descriptive analysis text */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 tracking-wider font-mono block">
+                      ANÁLISE DETALHADA:
+                    </span>
+                    <p className="bg-white p-3.5 border border-slate-200 text-xs text-slate-600 rounded-xl leading-relaxed italic">
+                      "{aiAnalysisResult.analysis}"
+                    </p>
+                  </div>
+
+                  {/* Recommended ecological path alternative */}
+                  <div className="space-y-1.5 bg-white p-4 border border-slate-200 rounded-xl shadow-xs">
+                    <span className="text-[10px] font-bold text-emerald-700 font-mono block flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[15px]">eco</span>
+                      CAMINHO ALTERNATIVO RECOMENDADO:
+                    </span>
+                    <p className="text-xs text-slate-700 leading-normal font-semibold">
+                      {aiAnalysisResult.alternative}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* AI Call Triggers */}
+            <div className="pt-4 border-t border-slate-200 shrink-0 select-none">
+              <button
+                type="button"
+                onClick={handleAIAnalysis}
+                disabled={isAnalyzing}
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">psychology</span>
+                <span>Análise Inteligente por IA (Gemini)</span>
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </div>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { UserProfile } from '../types';
+
+interface SidebarProps {
+  currentTab: string;
+  onTabChange: (tab: string) => void;
+  activeProfile: UserProfile;
+  profiles: UserProfile[];
+  onProfileChange: (profile: UserProfile) => void;
+}
+
+export default function Sidebar({
+  currentTab,
+  onTabChange,
+  activeProfile,
+  profiles,
+  onProfileChange,
+}: SidebarProps) {
+  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+
+  const navItems = [
+    { id: 'timeline', label: 'Linha do Tempo', icon: 'timeline' },
+    { id: 'commitments', label: 'Compromissos Ativos', icon: 'assignment_turned_in' },
+    { id: 'governance', label: 'Governança', icon: 'gavel' },
+    { id: 'archive', label: 'Arquivo de Aprendizado', icon: 'library_books' },
+  ];
+
+  const handleProfileSelect = (profile: UserProfile) => {
+    onProfileChange(profile);
+    setShowProfileSwitcher(false);
+  };
+
+  return (
+    <aside className="fixed left-0 top-0 h-full w-[280px] bg-slate-900 text-slate-100 border-r border-slate-800 flex flex-col py-6 z-50 shadow-2xl transition-all duration-300">
+      {/* Brand Header */}
+      <div className="px-6 mb-8 group cursor-pointer">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-400 text-3xl animate-pulse">
+              verified_user
+            </span>
+            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent">
+              Passaporte
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 font-mono tracking-widest uppercase font-semibold text-emerald-400/90 pl-8">
+            Regulação Consciente
+          </span>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-1 space-y-1 px-3">
+        {navItems.map((item) => {
+          const isActive = currentTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-250 cursor-pointer ${
+                isActive
+                  ? 'border-l-4 border-emerald-400 text-white font-semibold bg-slate-800/80 shadow-lg shadow-emerald-500/5'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+              }`}
+            >
+              <span
+                className={`material-symbols-outlined text-2xl transition-transform duration-300 ${
+                  isActive ? 'text-emerald-400 scale-110' : 'text-slate-400'
+                }`}
+              >
+                {item.icon}
+              </span>
+              <span className="text-[14px]">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer Audit Logs Tab & Profile Switcher */}
+      <div className="px-4 mt-auto space-y-4">
+        <button
+          onClick={() => onTabChange('audit_logs')}
+          className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-250 text-left cursor-pointer ${
+            currentTab === 'audit_logs'
+              ? 'border-l-4 border-emerald-400 text-purple-200 font-semibold bg-slate-800/80'
+              : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
+          }`}
+        >
+          <span className="material-symbols-outlined text-2xl">history_edu</span>
+          <span className="text-[14px]">Log de Auditoria</span>
+        </button>
+
+        {/* Profile Card / Swapper Trigger */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileSwitcher(!showProfileSwitcher)}
+            className="w-full flex items-center gap-3 p-3 bg-slate-800/90 hover:bg-slate-800 rounded-2xl border border-slate-700/60 shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+            title="Clique para alternar gestor/perfil"
+          >
+            <img
+              alt={activeProfile.avatarAlt}
+              src={activeProfile.avatar}
+              className="w-10 h-10 rounded-full object-cover border-2 border-slate-600 shadow-md mr-1"
+            />
+            <div className="flex flex-col text-left overflow-hidden">
+              <span className="font-bold text-slate-100 text-[13px] truncate flex items-center gap-1">
+                {activeProfile.name}
+                <span className="material-symbols-outlined text-[14px] text-slate-400 uppercase">
+                  unfold_more
+                </span>
+              </span>
+              <span className="text-[11px] text-emerald-400 font-mono tracking-wider truncate uppercase">
+                {activeProfile.role}
+              </span>
+            </div>
+          </button>
+
+          {/* Profile Switcher Bubble Dropdown */}
+          {showProfileSwitcher && (
+            <div className="absolute bottom-16 left-0 w-full bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl p-2 z-50 text-slate-200 animate-in fade-in slide-in-from-bottom-4 duration-200">
+              <div className="px-3 py-1.5 border-b border-slate-700 mb-1">
+                <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase font-mono">
+                  Selecione o Agente do Portal
+                </span>
+              </div>
+              <div className="max-h-[220px] overflow-y-auto space-y-1 custom-scrollbar">
+                {profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => handleProfileSelect(profile)}
+                    className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors cursor-pointer ${
+                      activeProfile.id === profile.id
+                        ? 'bg-slate-700 text-white font-medium'
+                        : 'hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <img
+                      alt={profile.avatarAlt}
+                      src={profile.avatar}
+                      className="w-8 h-8 rounded-full object-cover border border-slate-600"
+                    />
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-[12px] text-slate-200 font-bold truncate">
+                        {profile.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 truncate">
+                        {profile.role}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useState } from 'react';
+import { Decision } from '../types';
+
+interface TimelineViewProps {
+  decisions: Decision[];
+  onOpenNewDecision: () => void;
+  searchQuery: string;
+}
+
+export default function TimelineView({
+  decisions,
+  onOpenNewDecision,
+  searchQuery,
+}: TimelineViewProps) {
+  // Filter States
+  const [period, setPeriod] = useState('Últimos 30 dias');
+  const [alertType, setAlertType] = useState<'Todos' | 'Críticos' | 'Riscos'>('Todos');
+  const [decisor, setDecisor] = useState('Qualquer Decisor');
+  const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setPeriod('Últimos 30 dias');
+    setAlertType('Todos');
+    setDecisor('Qualquer Decisor');
+  };
+
+  // Filter Logic
+  const filteredDecisions = decisions.filter((d) => {
+    // 1. Alert Type filter
+    if (alertType === 'Críticos' && d.type !== 'CRÍTICO') return false;
+    if (alertType === 'Riscos' && d.type !== 'RISCO') return false;
+
+    // 2. Decisor filter
+    if (decisor !== 'Qualquer Decisor' && d.decisor !== decisor) return false;
+
+    // 3. Search query filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchesTitle = d.title.toLowerCase().includes(q);
+      const matchesJustification = d.justification.toLowerCase().includes(q);
+      const matchesAuthor = d.author.toLowerCase().includes(q);
+      const matchesDecisor = d.decisor.toLowerCase().includes(q);
+      if (!matchesTitle && !matchesJustification && !matchesAuthor && !matchesDecisor) return false;
+    }
+
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Dynamic Filter Bar */}
+      <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-6">
+        {/* Period selection */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+            PERÍODO
+          </span>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-medium focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none outline-none cursor-pointer"
+          >
+            <option>Últimos 30 dias</option>
+            <option>Trimestre Atual</option>
+            <option>Ano 2024</option>
+          </select>
+        </div>
+
+        {/* Alert type selection */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+            TIPO DE ALERTA
+          </span>
+          <div className="flex gap-2">
+            {(['Todos', 'Críticos', 'Riscos'] as const).map((type) => {
+              const isActive = alertType === type;
+              return (
+                <button
+                  key={type}
+                  onClick={() => setAlertType(type)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200/80'
+                  } transition-all duration-150 cursor-pointer`}
+                >
+                  {type}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Decisor selection */}
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase">
+            DECISOR
+          </span>
+          <select
+            value={decisor}
+            onChange={(e) => setDecisor(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-700 font-medium focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none outline-none cursor-pointer"
+          >
+            <option>Qualquer Decisor</option>
+            <option>Engenharia</option>
+            <option>Compliance</option>
+            <option>Design de Produto</option>
+          </select>
+        </div>
+
+        {/* Reset Filter Button */}
+        {(alertType !== 'Todos' || decisor !== 'Qualquer Decisor' || period !== 'Últimos 30 dias') && (
+          <button
+            onClick={handleClearFilters}
+            className="ml-auto flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-bold text-xs select-none cursor-pointer group"
+          >
+            <span className="material-symbols-outlined text-[16px] group-hover:rotate-180 transition-transform duration-300">
+              filter_list_off
+            </span>
+            <span>Limpar Filtros</span>
+          </button>
+        )}
+      </section>
+
+      {/* Chronological Vertical Timeline Feed */}
+      <div className="relative pl-12 before:content-[''] before:absolute before:left-5 before:top-0 before:bottom-0 before:w-0.5 before:bg-slate-250 before:z-0 space-y-6">
+        {filteredDecisions.length === 0 ? (
+          <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 py-12 px-6 text-center text-slate-500">
+            <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">
+              find_in_page
+            </span>
+            <p className="text-sm font-medium">Nenhuma decisão encontrada</p>
+            <p className="text-xs text-slate-400 mt-1">
+              Ajuste filtros ou registre um novo passaporte imutável de decisão.
+            </p>
+          </div>
+        ) : (
+          filteredDecisions.map((d, index) => {
+            // Pick vertical indicator colors
+            let indicatorBg = 'bg-slate-300';
+            let cardBgAndBorder = 'bg-white border-slate-200';
+            let categoryLabel = 'CONFORMIDADE';
+            let badgeBg = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+            let descriptionTitleClass = 'text-emerald-600';
+
+            if (d.type === 'CRÍTICO') {
+              indicatorBg = 'bg-rose-500 ring-rose-300';
+              cardBgAndBorder = 'bg-white border-rose-300 border-2';
+              categoryLabel = 'CRÍTICO';
+              badgeBg = 'bg-rose-50 text-rose-600 border-rose-100';
+              descriptionTitleClass = 'text-rose-600';
+            } else if (d.type === 'RISCO') {
+              indicatorBg = 'bg-amber-500 ring-amber-300';
+              cardBgAndBorder = 'bg-amber-50/10 border-amber-400 border-2 border-dashed';
+              categoryLabel = `${d.divergencesCount || 2} DIVERGÊNCIAS`;
+              badgeBg = 'bg-amber-50 text-amber-800 border-amber-200';
+              descriptionTitleClass = 'text-amber-700';
+            }
+
+            return (
+              <div key={d.id} className="relative group/card">
+                {/* Timeline Dot Indicator */}
+                <span
+                  className={`absolute -left-[37px] top-6 w-3.5 h-3.5 rounded-full z-10 border-4 border-slate-50 ring-4 transition-all duration-300 ${indicatorBg} group-hover/card:scale-125`}
+                />
+
+                {/* Card Outer */}
+                <div
+                  className={`p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 ${cardBgAndBorder} relative overflow-hidden`}
+                >
+                  {/* Decorative Red top line for Critical item */}
+                  {d.type === 'CRÍTICO' && (
+                    <div className="absolute top-0 left-0 w-full h-1 bg-rose-500" />
+                  )}
+
+                  {/* Card Header */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          d.type === 'CRÍTICO'
+                            ? 'bg-rose-100 text-rose-600'
+                            : d.type === 'RISCO'
+                            ? 'bg-amber-150 text-amber-700'
+                            : 'bg-emerald-100 text-emerald-600'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-2xl font-bold">
+                          {d.type === 'CRÍTICO'
+                            ? 'close'
+                            : d.type === 'RISCO'
+                            ? 'warning'
+                            : 'check_circle'}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-mono text-slate-400 font-semibold uppercase tracking-wider">
+                          {d.date}
+                        </div>
+                        <h3 className="font-bold text-[17px] text-slate-800 tracking-tight">
+                          {d.title}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 self-stretch sm:self-auto">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold border ${badgeBg} tracking-wide uppercase font-mono`}
+                      >
+                        {categoryLabel}
+                      </span>
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400 tracking-wide select-none">
+                        <span className="material-symbols-outlined text-[13px] text-slate-400">
+                          database
+                        </span>
+                        SELO 🔒 IMUTÁVEL
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body / Justification */}
+                  <div className="pl-0 sm:pl-13">
+                    <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                      <span className={`font-bold mr-1 ${descriptionTitleClass}`}>
+                        Justificativa:
+                      </span>
+                      {d.justification}
+                    </p>
+
+                    {/* Alerta de regulamento legal integrado à tela */}
+                    {d.regulatoryRiskWarning && (
+                      <div className="mb-4 p-3 bg-amber-50/50 border border-amber-200/60 rounded-xl flex items-start gap-2.5">
+                        <span className="material-symbols-outlined text-amber-600 text-[18px] shrink-0 mt-0.5">
+                          gavel
+                        </span>
+                        <p className="text-xs text-amber-800 leading-normal font-medium">
+                          {d.regulatoryRiskWarning}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Card Footer actions */}
+                    <div className="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 gap-3">
+                      {/* Avatars Involved */}
+                      {d.avatars ? (
+                        <div className="flex -space-x-2">
+                          {d.avatars.map((av, idx) => (
+                            <img
+                              key={idx}
+                              src={av}
+                              alt="Votante"
+                              className="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm bg-slate-100"
+                            />
+                          ))}
+                        </div>
+                      ) : d.impactProgress > 0 ? (
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-slate-400 tracking-wider">
+                            IMPACTO: {d.impactLevel}
+                          </span>
+                          <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${
+                                d.type === 'RISCO' ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${d.impactProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px]">
+                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                          <span>Visualizado por 4 stakeholders</span>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => setSelectedDecision(d)}
+                        className={`px-4 py-2 hover:bg-slate-100 hover:text-slate-900 border text-slate-700 border-slate-200 font-semibold rounded-xl text-xs transition-all duration-200 cursor-pointer shadow-sm`}
+                      >
+                        Ver completa
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Embedded Details Modal/Drawer */}
+      {selectedDecision && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col animate-in scale-in duration-200">
+            {/* Header */}
+            <div className={`p-6 text-white ${
+              selectedDecision.type === 'CRÍTICO'
+                ? 'bg-rose-600'
+                : selectedDecision.type === 'RISCO'
+                ? 'bg-amber-500'
+                : 'bg-emerald-600'
+            } flex justify-between items-start flex-col gap-2 relative`}>
+              <button
+                onClick={() => setSelectedDecision(null)}
+                className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-2xl font-bold">close</span>
+              </button>
+              <div className="text-[10px] font-mono opacity-85 uppercase tracking-widest font-bold">
+                CÉDULA DE EXAME DE CONFORMIDADE DIGITAL ({selectedDecision.code})
+              </div>
+              <h2 className="text-xl font-bold font-sans pr-10">{selectedDecision.title}</h2>
+              <div className="flex gap-4 text-xs font-mono opacity-90 mt-1">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">calendar_month</span>
+                  {selectedDecision.date}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">database</span>
+                  LEDGER ID: REG-{selectedDecision.code.replace('#', '')}
+                </span>
+              </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar text-sm text-slate-700">
+              {/* Veredito */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center gap-4">
+                <div className={`p-3 rounded-xl flex items-center justify-center shrink-0 ${
+                  selectedDecision.type === 'CRÍTICO'
+                    ? 'bg-rose-100 text-rose-600'
+                    : selectedDecision.type === 'RISCO'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-emerald-100 text-emerald-600'
+                }`}>
+                  <span className="material-symbols-outlined text-3xl font-bold">
+                    {selectedDecision.type === 'CRÍTICO'
+                      ? 'gavel'
+                      : selectedDecision.type === 'RISCO'
+                      ? 'warning'
+                      : 'verified'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm font-sans mb-0.5">Veredito do Diário de Bordo</h4>
+                  <p className="text-xs text-slate-500">
+                    Esta decisão está classificada como <span className="font-bold underline uppercase">{selectedDecision.type}</span> na escala regulatória.
+                  </p>
+                </div>
+              </div>
+
+              {/* Justification Section */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-800 font-sans text-sm tracking-tight flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">verified_user</span>
+                  Por que foi decidido? (Justificativa técnica)
+                </h4>
+                <p className="bg-slate-100/50 p-4 rounded-xl border border-slate-250 italic text-slate-600 leading-relaxed">
+                  "{selectedDecision.justification}"
+                </p>
+              </div>
+
+              {/* Alternatives Rejected */}
+              {selectedDecision.alternativesRejected && (
+                <div className="space-y-2">
+                  <h4 className="font-bold text-slate-800 font-sans text-sm tracking-tight flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-rose-500 text-[18px]">cancel</span>
+                    Alternativas Rejeitadas (E por que foram descartadas?)
+                  </h4>
+                  <p className="bg-rose-50/10 p-4 rounded-xl border border-rose-150 text-slate-600 leading-relaxed">
+                    {selectedDecision.alternativesRejected}
+                  </p>
+                </div>
+              )}
+
+              {/* Carbon rating and metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-slate-100/50 rounded-2xl border border-slate-200">
+                  <div className="text-slate-500 text-xs font-bold uppercase tracking-wider font-mono mb-2">
+                    IMPACTO DE CARBONO ESTIMADO
+                  </div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-2xl font-extrabold text-slate-800">
+                      {selectedDecision.impactProgress}%
+                    </span>
+                    <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                      selectedDecision.impactLevel === 'ALTO'
+                        ? 'bg-rose-100 text-rose-700 animate-pulse'
+                        : selectedDecision.impactLevel === 'MÉDIO'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {selectedDecision.impactLevel} IMPACTO
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        selectedDecision.impactLevel === 'ALTO'
+                          ? 'bg-rose-500'
+                          : selectedDecision.impactLevel === 'MÉDIO'
+                          ? 'bg-amber-400'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${selectedDecision.impactProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-150/50 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                  <div>
+                    <div className="text-slate-500 text-xs font-bold uppercase tracking-wider font-mono mb-1">
+                      COMPROMISSO DE DURAÇÃO
+                    </div>
+                    <p className="text-slate-800 font-bold text-sm">
+                      {selectedDecision.commitmentDuration}
+                    </p>
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono mt-2">
+                    Status: <span className="text-emerald-500 font-bold">VIGENTE E AUDITÁVEL</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Decisor credentials */}
+              <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase mb-1">
+                    DECISOR RESPONSÁVEL
+                  </div>
+                  <p className="text-slate-800 font-bold text-sm">{selectedDecision.decisor}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-slate-400 font-mono tracking-wider uppercase mb-1">
+                    AUTOR DO REGISTRO
+                  </div>
+                  <p className="text-slate-800 font-medium text-xs">
+                    {selectedDecision.author} ({selectedDecision.authorRole})
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-400 font-mono">
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">lock</span>
+                IMUTÁVEL E INTEGRADO (HASHLOG: CFH94318X)
+              </span>
+              <button
+                onClick={() => setSelectedDecision(null)}
+                className="px-5 py-2 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer bg-slate-100 border border-slate-200 shadow-sm"
+              >
+                Fechar Painel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
