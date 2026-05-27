@@ -1,0 +1,6 @@
+{
+  "name": "Passaporte do Projeto",
+  "description": "Uma plataforma inteligente e imutável de rastreabilidade de decisões de design para conformidade ecológica e regulatória.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
